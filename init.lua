@@ -82,25 +82,11 @@ require('lazy').setup({
 
   'echasnovski/mini.nvim',
   { 'MunifTanjim/nui.nvim', lazy = true },
-  -- NOTE: This is where your plugins related to LSP can be installed.
-  --  The configuration is done below. Search for lspconfig to find it below.
-  {
-    -- LSP Configuration & Plugins
-    'neovim/nvim-lspconfig',
-    dependencies = {
-      -- Automatically install LSPs to stdpath for neovim
-      { 'williamboman/mason.nvim', config = true },
-      'williamboman/mason-lspconfig.nvim',
 
-      -- Useful status updates for LSP
-      -- NOTE: `opts = {}` is the same as calling `require('fidget').setup({})`
-      { 'j-hui/fidget.nvim',       opts = {} },
-
-      -- Additional lua configuration, makes nvim stuff amazing!
-      'folke/neodev.nvim',
-    },
-  },
-
+  'williamboman/mason.nvim',
+  'williamboman/mason-lspconfig.nvim',
+  'neovim/nvim-lspconfig',
+  'folke/neodev.nvim',
   {
     -- Autocompletion
     'hrsh7th/nvim-cmp',
@@ -170,7 +156,7 @@ require('lazy').setup({
   },
 
   -- "gc" to comment visual regions/lines
-  { 'numToStr/Comment.nvim',  opts = {} },
+  { 'numToStr/Comment.nvim', opts = {} },
 
   -- Fuzzy Finder (files, lsp, etc)
   {
@@ -526,7 +512,7 @@ require('mason-lspconfig').setup()
 local servers = {
   -- clangd = {},
   -- gopls = {},
-  -- pyright = {},
+  pyright = {},
   -- rust_analyzer = {},
   -- tsserver = {},
   -- html = { filetypes = { 'html', 'twig', 'hbs'} },
@@ -537,6 +523,22 @@ local servers = {
       telemetry = { enable = false },
       -- NOTE: toggle below to ignore Lua_LS's noisy `missing-fields` warnings
       -- diagnostics = { disable = { 'missing-fields' } },
+    },
+  },
+
+  taplo = {
+    keys = {
+      {
+        'K',
+        function()
+          if vim.fn.expand '%:t' == 'Cargo.toml' and require('crates').popup_available() then
+            require('crates').show_popup()
+          else
+            vim.lsp.buf.hover()
+          end
+        end,
+        desc = 'Show Crate Documentation',
+      },
     },
   },
 }
@@ -574,6 +576,17 @@ require('luasnip.loaders.from_vscode').lazy_load()
 luasnip.config.setup {}
 
 cmp.setup {
+  dependencies = {
+    {
+      'Saecki/crates.nvim',
+      event = { 'BufRead Cargo.toml' },
+      opts = {
+        src = {
+          cmp = { enabled = true },
+        },
+      },
+    },
+  },
   snippet = {
     expand = function(args)
       luasnip.lsp_expand(args.body)
@@ -582,6 +595,14 @@ cmp.setup {
   completion = {
     completeopt = 'menu,menuone,noinsert',
   },
+  ---@param opts cmp.ConfigSchema
+  opts = function(_, opts)
+    local cmp = require 'cmp'
+    opts.sources = cmp.config.sources(vim.list_extend(opts.sources, {
+      { name = 'crates' },
+    }))
+  end,
+
   mapping = cmp.mapping.preset.insert {
     ['<C-n>'] = cmp.mapping.select_next_item(),
     ['<C-p>'] = cmp.mapping.select_prev_item(),
